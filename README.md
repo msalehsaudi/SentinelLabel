@@ -215,6 +215,48 @@ The core innovation is the **vegetation-weighted Felzenszwalb → K-Means pipeli
 
 ---
 
+## 🛠️ Tech Stack & Design Decisions
+
+### Core Philosophy
+
+Geotag is built on **cloud-native, battle-tested open source**—no proprietary formats, no vendor lock-in, no build steps.
+
+| Layer | Technology | Why We Chose It |
+|-------|------------|-----------------|
+| **Backend** | FastAPI + Uvicorn | Async Python for concurrent S3 streaming; automatic OpenAPI docs; battle-tested at scale (Netflix, Uber) |
+| **STAC Search** | pystac-client | Industry standard for satellite catalog discovery; works with any STAC-compliant API (Earth Search, Planetary Computer, etc.) |
+| **Cloud Streaming** | rioxarray + rasterio + dask | Lazy loading from S3 COGs (Cloud-Optimized GeoTIFFs) means multi-GB imagery streams in seconds without disk writes; Dask enables parallel chunk processing |
+| **Segmentation** | scikit-image (Felzenszwalb) | Graph-based superpixel algorithm that respects natural boundaries better than SLIC for vegetation; no GPU required |
+| **Clustering** | scikit-learn (K-Means) | Fast CPU-based spectral clustering; deterministic results; scales to 10k+ segments |
+| **Geospatial** | geopandas + shapely + pyproj | Industry standard for vector operations; handles CRS transformations and GeoPackage I/O flawlessly |
+| **Frontend** | React 18 (CDN) | Component-based UI without build complexity; CDN loading means zero npm/node setup |
+| **Mapping** | Leaflet + Leaflet.draw | Mature, lightweight, mobile-friendly; 100k+ GitHub stars; works offline once loaded |
+| **Data Format** | GeoPackage (GPKG) | OGC standard accepted by all GIS tools (QGIS, ArcGIS, PostGIS); single-file SQLite backend; no shapefile limitations |
+| **Environment** | Conda + pip | Conda handles complex geospatial binary dependencies (GDAL, PROJ); pip for pure Python packages |
+
+### Why Not...
+
+| Alternative | Why We Passed |
+|-------------|---------------|
+| **TensorFlow/PyTorch for segmentation** | Heavy GPU dependency; overkill for superpixels; scikit-image is CPU-efficient and sufficient |
+| **Deep learning models** | Requires pre-trained weights, domain adaptation, large training sets; defeats the zero-to-labels-in-minutes goal |
+| **React build tools (Webpack/Vite)** | Adds 500MB+ node_modules and build complexity; CDN React is production-ready for this scale |
+| **Shapefile export** | 2GB size limit, no metadata, multiple files; GeoPackage is modern and unlimited |
+| **PostGIS/SQLite for state** | Overkill for single-user workflow; in-memory dict is faster and simpler; session persistence is roadmap item |
+| **Flask instead of FastAPI** | No native async support; manual OpenAPI docs; less performant for I/O-bound streaming |
+
+### Performance Characteristics
+
+| Metric | Typical Value | Bottleneck |
+|--------|---------------|------------|
+| STAC query | 1-3s | Network latency to Earth Search |
+| S3 streaming (10 bands) | 5-20s | AWS bandwidth + rioxarray chunk scheduling |
+| Segmentation (1 sq km) | 5-15s | CPU-bound Felzenszwalb; scales with AOI size |
+| Vectorization | 2-10s | GDAL polygonization via rasterio.features |
+| **Total: AOI → Polygons** | **15-45s** | I/O bound, not compute bound |
+
+---
+
 ## 🛠️ Installation
 
 ### Prerequisites
