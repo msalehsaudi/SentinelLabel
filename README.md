@@ -19,6 +19,46 @@ Creating labeled geospatial datasets traditionally requires:
 
 ---
 
+## ⚠️ The Labeling Problem (What Geotag Solves)
+
+### Current Industry Pain Points
+
+**1. The Google Maps Dependency & Co-registration Issues**
+
+Many labeling teams resort to using Google Maps as a base layer because Sentinel-2's 10m resolution feels too coarse for precise boundary drawing. This creates serious problems:
+- **Temporal mismatch**: Google Maps imagery may be months or years apart from the Sentinel-2 acquisition date—vegetation changes, construction happens, water levels fluctuate
+- **Geometric misalignment**: Google Maps uses different projections and orthorectification pipelines; features don't line up with Sentinel-2 pixels
+- **Label leakage**: Training on Sentinel-2 but labeling from higher-res Google Maps produces models that fail in production when only Sentinel-2 is available
+
+**2. No Standardization Across Labelers**
+
+Traditional polygon drawing is subjective:
+- **Edge definition varies**: One labeler includes the shadow as part of a building; another doesn't
+- **Scale inconsistency**: Labeler A captures individual trees; Labeler B groups them as "forest patch"
+- **Class drift**: "Urban" means building footprints to one person, impervious surface to another, entire neighborhoods to a third
+- **Quality variance**: Junior labelers produce jagged, over-fitted polygons; seniors generalize too aggressively
+
+The result: a dataset with 10,000 labels that behaves like 10 different datasets stitched together.
+
+**3. Area-Based Imbalance (The Hidden Bias)**
+
+Most labeling workflows optimize for **label count**, not **area coverage**:
+- A labeler knocks out 50 quick "tree" labels in a dense park (small area, high count)
+- The same time produces 5 "barren" labels in a vast desert (large area, low count)
+- **Dataset appears balanced by count**: 50 trees vs 5 barren = 91% tree bias by area
+- Model trains on 91% tree spectra, fails spectacularly on the 9% barren reality
+
+**4. Manual Labor Bottleneck**
+
+A single 10km² AOI at 10m resolution contains **100,000 pixels**. Traditional workflows:
+- Draw every polygon by hand: 8-16 hours
+- Review for consistency: 2-4 hours  
+- Export and format convert: 1 hour
+
+**Geotag's solution**: Automated superpixel segmentation pre-cuts the image into 500-5,000 semantically-meaningful regions. Humans classify, computers draw. Time: 10-30 minutes for the same AOI.
+
+---
+
 ## 🚀 The Journey: From Zero to Labels
 
 ### Step 1: Launch
